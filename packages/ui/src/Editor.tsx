@@ -5,36 +5,54 @@ import React, { useState, useRef, useEffect } from 'react';
 interface ClipItem {
   id: string;
   name: string;
-  type: 'video' | 'audio' | 'text';
+  track: 'v2' | 'v1' | 'a1';
   duration: number;
   text?: string;
 }
 
-const TABS = ['Media', 'Stock Media', 'Audio', 'Titles', 'Transitions', 'Effects', 'Stickers', 'Templates'];
-const SAMPLES = [
-  { name: 'Neon Abstract', grad: 'linear-gradient(135deg, #0ea5e9, #6366f1)', duration: 5 },
-  { name: 'Studio Silhouette', grad: 'linear-gradient(135deg, #10b981, #065f46)', duration: 4 },
-  { name: 'Typography Reel', grad: 'linear-gradient(135deg, #f59e0b, #78350f)', duration: 6 },
-  { name: 'Cyber Prism', grad: 'linear-gradient(135deg, #ec4899, #4f46e5)', duration: 5 },
-  { name: 'Sunset Palms', grad: 'linear-gradient(135deg, #f43f5e, #8b5cf6)', duration: 7 },
-  { name: 'Minimal Arch', grad: 'linear-gradient(135deg, #64748b, #1e293b)', duration: 4 },
+const NAV_TABS = ['Media', 'Audio', 'Titles', 'Transitions', 'Effects', 'Elements', 'Split Screen'];
+const SIDEBAR_ITEMS = [
+  { label: 'Favorite', count: '(0)' },
+  { label: 'Included', count: '(287)' },
+  { label: 'Filters', count: '(160)' },
+  { label: 'Overlays', count: '(90)', active: true },
+  { label: 'Light Leaks', count: '(8)' },
+  { label: 'Bokeh Blurs', count: '(10)' },
+  { label: 'Old Film', count: '(9)' },
+  { label: 'LUT', count: '(28)' },
+];
+
+const CARDS = [
+  { name: 'Silent Film', bg: 'linear-gradient(135deg, #3b5249, #1f2d27)', dur: 4 },
+  { name: 'Bokeh Blur 1', bg: 'linear-gradient(135deg, #4b6cb7, #182848)', dur: 5 },
+  { name: 'Light Leak 4', bg: 'linear-gradient(135deg, #c97b63, #3a231c)', dur: 4 },
+  { name: 'Light Leak 1', bg: 'linear-gradient(135deg, #2c5364, #0f2027)', dur: 6 },
+  { name: "90's Viewfinder", bg: 'linear-gradient(135deg, #434343, #1c1c1c)', dur: 5 },
+  { name: 'Static 2', bg: 'linear-gradient(135deg, #355c7d, #2a363b)', dur: 4 },
+  { name: 'Silent Film 2', bg: 'linear-gradient(135deg, #616161, #2b2b2b)', dur: 5 },
+  { name: 'Film 4', bg: 'linear-gradient(135deg, #5c4d3c, #262019)', dur: 4 },
+  { name: 'Disco', bg: 'linear-gradient(135deg, #8e44ad, #2c3e50)', dur: 5 },
 ];
 
 export function Editor() {
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState(4);
   const [search, setSearch] = useState('');
   const [clips, setClips] = useState<ClipItem[]>([
-    { id: 'c1', name: 'Intro Scene', type: 'video', duration: 5 },
-    { id: 'c2', name: 'Main Cut', type: 'video', duration: 6 },
+    { id: 'v2-1', name: 'Title 14', track: 'v2', duration: 5 },
+    { id: 'v2-2', name: 'Split Screen 26', track: 'v2', duration: 6 },
+    { id: 'v2-3', name: 'Plating Food', track: 'v2', duration: 5 },
+    { id: 'v1-1', name: 'Islands', track: 'v1', duration: 6 },
+    { id: 'v1-2', name: 'Beach', track: 'v1', duration: 5 },
+    { id: 'a1-1', name: 'Around The Corner', track: 'a1', duration: 16 },
   ]);
   const [history, setHistory] = useState<ClipItem[][]>([]);
   const [future, setFuture] = useState<ClipItem[][]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>('c1');
-  const [currentTime, setCurrentTime] = useState(0);
+  const [selectedId, setSelectedId] = useState<string | null>('v2-1');
+  const [currentTime, setCurrentTime] = useState(4.1);
   const [isPlaying, setIsPlaying] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const totalDuration = Math.max(1, clips.filter((c) => c.type !== 'audio').reduce((s, c) => s + c.duration, 0));
+  const totalDuration = 20;
 
   const commit = (next: ClipItem[]) => {
     setHistory((h) => [...h, clips]);
@@ -48,7 +66,7 @@ export function Editor() {
       setCurrentTime((t) => (t + 0.1 >= totalDuration ? (setIsPlaying(false), 0) : Number((t + 0.1).toFixed(1))));
     }, 100);
     return () => clearInterval(id);
-  }, [isPlaying, totalDuration]);
+  }, [isPlaying]);
 
   const fmt = (sec: number) => {
     const m = Math.floor(sec / 60).toString().padStart(2, '0');
@@ -63,38 +81,39 @@ export function Editor() {
     if (!c || !ctx) return;
     const active = clips.find((item) => item.id === selectedId) || clips[0];
     const g = ctx.createLinearGradient(0, 0, c.width, c.height);
-    g.addColorStop(0, '#0f172a');
-    g.addColorStop(0.5, '#1e1b4b');
-    g.addColorStop(1, '#064e3b');
+    g.addColorStop(0, '#1e3c40');
+    g.addColorStop(0.55, '#2b585e');
+    g.addColorStop(1, '#142629');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, c.width, c.height);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '600 22px Inter, sans-serif';
+    ctx.fillStyle = '#e6edf3';
+    ctx.font = '600 20px Inter, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(active ? active.text || active.name : 'No Clip Selected', c.width / 2, c.height / 2 - 8);
-    ctx.fillStyle = '#16d9a3';
-    ctx.font = '14px monospace';
-    ctx.fillText(`Time: ${fmt(currentTime)}`, c.width / 2, c.height / 2 + 22);
+    ctx.fillText(active ? active.text || active.name : 'Preview Monitor', c.width / 2, c.height / 2 - 6);
+    ctx.fillStyle = '#29d398';
+    ctx.font = '13px monospace';
+    ctx.fillText(fmt(currentTime), c.width / 2, c.height / 2 + 20);
   }, [clips, selectedId, currentTime]);
 
   const onImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const item: ClipItem = { id: `c-${Date.now()}`, name: file.name, type: file.type.startsWith('audio/') ? 'audio' : 'video', duration: 5 };
+    const isAudio = file.type.startsWith('audio/');
+    const item: ClipItem = { id: `c-${Date.now()}`, name: file.name, track: isAudio ? 'a1' : 'v1', duration: 5 };
     commit([...clips, item]);
     setSelectedId(item.id);
   };
 
-  const onAddSample = (name: string, duration: number) => {
-    const item: ClipItem = { id: `s-${Date.now()}`, name, type: 'video', duration };
+  const onAddCard = (name: string, dur: number) => {
+    const item: ClipItem = { id: `fx-${Date.now()}`, name, track: 'v2', duration: dur };
     commit([...clips, item]);
     setSelectedId(item.id);
   };
 
   const onAddText = () => {
-    const text = window.prompt('Enter overlay text:', 'Title Overlay');
+    const text = window.prompt('Enter overlay text:', 'Title 15');
     if (!text) return;
-    const item: ClipItem = { id: `t-${Date.now()}`, name: `Text: ${text}`, type: 'text', duration: 4, text };
+    const item: ClipItem = { id: `t-${Date.now()}`, name: text, track: 'v2', duration: 4, text };
     commit([...clips, item]);
     setSelectedId(item.id);
   };
@@ -105,7 +124,7 @@ export function Editor() {
     const half = Number((target.duration / 2).toFixed(1));
     const idx = clips.findIndex((c) => c.id === selectedId);
     const next = [...clips];
-    next.splice(idx, 1, { ...target, id: `${target.id}-1`, name: `${target.name} (1)`, duration: half }, { ...target, id: `${target.id}-2`, name: `${target.name} (2)`, duration: half });
+    next.splice(idx, 1, { ...target, id: `${target.id}-1`, duration: half }, { ...target, id: `${target.id}-2`, duration: half });
     commit(next);
   };
 
@@ -116,7 +135,7 @@ export function Editor() {
   };
 
   const onExport = () => {
-    const buf = new ArrayBuffer(44 + 44100 * 2);
+    const buf = new ArrayBuffer(44 + 88200);
     const v = new DataView(buf);
     const w = (o: number, s: string) => [...s].forEach((ch, i) => v.setUint8(o + i, ch.charCodeAt(0)));
     w(0, 'RIFF'); v.setUint32(4, 36 + 88200, true); w(8, 'WAVE'); w(12, 'fmt ');
@@ -125,50 +144,53 @@ export function Editor() {
     w(36, 'data'); v.setUint32(40, 88200, true);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
-    a.download = 'project-audio.wav';
+    a.download = 'project-export.wav';
     a.click();
   };
 
-  const videoClips = clips.filter((c) => c.type !== 'audio');
-  const audioClips = clips.filter((c) => c.type === 'audio');
-
   return (
-    <div className="nle-app">
-      <header className="nle-menubar">
-        <div className="menu-left">
-          <div className="app-logo">V</div>
-          <span className="menu-item">File</span><span className="menu-item">Edit</span><span className="menu-item">Tools</span><span className="menu-item">View</span>
-        </div>
-        <div className="project-title">My Project 1</div>
-        <div className="menu-right">
-          <button type="button" className="btn-export" onClick={onExport}>Export WAV</button>
+    <div className="fx-shell">
+      <header className="fx-titlebar">
+        <div className="fx-dots"><span className="fx-dot r" /><span className="fx-dot y" /><span className="fx-dot g" /></div>
+        <div className="fx-title">Audio-Video Studio (My Project 1)</div>
+        <div className="fx-top-actions">
+          <button type="button" className="fx-pill-buy" onClick={onExport}>Export</button>
         </div>
       </header>
 
-      <section className="nle-upper">
-        <div className="media-panel">
-          <div className="category-tabs">
-            {TABS.map((tab, i) => (
-              <div key={tab} onClick={() => setActiveTab(i)} className={`cat-tab ${activeTab === i ? 'active' : ''}`}><span>{tab}</span></div>
-            ))}
+      <section className="fx-upper">
+        <div className="fx-library">
+          <div className="fx-nav-bar">
+            <div className="fx-tabs">
+              {NAV_TABS.map((t, i) => (
+                <div key={t} onClick={() => setActiveTab(i)} className={`fx-tab ${activeTab === i ? 'active' : ''}`}><span>{t}</span></div>
+              ))}
+            </div>
+            <button type="button" className="fx-btn-export" onClick={onExport}>Export</button>
           </div>
-          <div className="media-body">
-            <aside className="folder-tree">
-              <div className="folder-item active">Project Media</div>
-              <div className="folder-item" style={{ paddingLeft: 18 }}>Sample Video</div>
-              <div className="folder-item" style={{ paddingLeft: 18 }}>Audio Tracks</div>
+
+          <div className="fx-lib-body">
+            <aside className="fx-sidebar">
+              {SIDEBAR_ITEMS.map((item) => (
+                <div key={item.label} className={`fx-tree-row ${item.active ? 'active' : ''}`}>
+                  <span>{item.label}</span><span>{item.count}</span>
+                </div>
+              ))}
             </aside>
-            <div className="media-browser-content">
-              <div className="search-bar-row">
-                <input className="search-input" placeholder="Search media..." value={search} onChange={(e) => setSearch(e.target.value)} />
-                <label className="btn-import-pill">+ Import<input type="file" accept="video/*,audio/*" hidden onChange={onImport} /></label>
+
+            <div className="fx-grid-area">
+              <div className="fx-search-row">
+                <label className="fx-import-btn">+ Import<input type="file" accept="video/*,audio/*" hidden onChange={onImport} /></label>
+                <input className="fx-search" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} />
               </div>
-              <div className="section-label">Sample Video & Clips</div>
-              <div className="media-grid">
-                {SAMPLES.filter((s) => s.name.toLowerCase().includes(search.toLowerCase())).map((card) => (
-                  <div key={card.name} className="media-card" onClick={() => onAddSample(card.name, card.duration)}>
-                    <div className="media-thumb" style={{ background: card.grad }}>ADD</div>
-                    <span className="media-card-title">{card.name}</span>
+
+              <div className="fx-cards">
+                {CARDS.filter((c) => c.name.toLowerCase().includes(search.toLowerCase())).map((card) => (
+                  <div key={card.name} className="fx-card" onClick={() => onAddCard(card.name, card.dur)}>
+                    <div className="fx-thumb" style={{ background: card.bg }}>
+                      <span className="fx-dl-badge">+</span>
+                    </div>
+                    <span className="fx-card-name">{card.name}</span>
                   </div>
                 ))}
               </div>
@@ -176,53 +198,64 @@ export function Editor() {
           </div>
         </div>
 
-        <div className="player-panel">
-          <div className="player-header">PLAYER</div>
-          <div className="player-viewport"><canvas ref={canvasRef} width={640} height={360} /></div>
-          <div className="player-controls">
-            <div className="scrubber-row">
-              <input type="range" className="mint-slider" min={0} max={totalDuration} step={0.1} value={currentTime} onChange={(e) => setCurrentTime(Number(e.target.value))} />
-              <span className="timecode-display">{fmt(currentTime)}</span>
+        <div className="fx-player">
+          <div className="fx-stage"><canvas ref={canvasRef} width={640} height={360} /></div>
+          <div className="fx-transport">
+            <div className="fx-scrub-row">
+              <input type="range" className="fx-slider" min={0} max={totalDuration} step={0.1} value={currentTime} onChange={(e) => setCurrentTime(Number(e.target.value))} />
+              <span className="fx-tc">{fmt(currentTime)}</span>
             </div>
-            <div className="transport-buttons">
-              <div className="icon-btn-group">
-                <button type="button" className="tool-icon-btn" onClick={() => setIsPlaying((p) => !p)}>{isPlaying ? 'Pause' : 'Play'}</button>
-                <button type="button" className="tool-icon-btn" onClick={() => { setIsPlaying(false); setCurrentTime(0); }}>Stop</button>
+            <div className="fx-controls-row">
+              <div className="fx-btn-row">
+                <button type="button" className="fx-icon-btn" onClick={() => setIsPlaying((p) => !p)}>{isPlaying ? 'Pause' : 'Play'}</button>
+                <button type="button" className="fx-icon-btn" onClick={() => { setIsPlaying(false); setCurrentTime(0); }}>Stop</button>
               </div>
-              <span className="quality-badge">Full Quality</span>
+              <span className="fx-res-box">1/2</span>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="timeline-panel">
-        <div className="timeline-actionbar">
-          <div className="icon-btn-group">
-            <button type="button" className="tool-icon-btn" disabled={!history.length} onClick={() => { setFuture((f) => [clips, ...f]); setClips(history[history.length - 1]); setHistory((h) => h.slice(0, -1)); }}>Undo</button>
-            <button type="button" className="tool-icon-btn" disabled={!future.length} onClick={() => { setHistory((h) => [...h, clips]); setClips(future[0]); setFuture((f) => f.slice(1)); }}>Redo</button>
-            <button type="button" className="tool-icon-btn" disabled={!selectedId} onClick={onSplit}>Split</button>
-            <button type="button" className="tool-icon-btn" onClick={onAddText}>+ Add Text</button>
-            <button type="button" className="tool-icon-btn" disabled={!selectedId} onClick={onDelete}>Delete</button>
+      <section className="fx-timeline">
+        <div className="fx-tl-toolbar">
+          <div className="fx-btn-row">
+            <button type="button" className="fx-icon-btn" disabled={!history.length} onClick={() => { setFuture((f) => [clips, ...f]); setClips(history[history.length - 1]); setHistory((h) => h.slice(0, -1)); }}>Undo</button>
+            <button type="button" className="fx-icon-btn" disabled={!future.length} onClick={() => { setHistory((h) => [...h, clips]); setClips(future[0]); setFuture((f) => f.slice(1)); }}>Redo</button>
+            <button type="button" className="fx-icon-btn" disabled={!selectedId} onClick={onDelete}>Delete</button>
+            <button type="button" className="fx-icon-btn" disabled={!selectedId} onClick={onSplit}>Split</button>
+            <button type="button" className="fx-icon-btn" onClick={onAddText}>+ Text</button>
+          </div>
+          <div className="fx-btn-row">
+            <input type="range" className="fx-slider" style={{ width: 95 }} defaultValue={60} />
           </div>
         </div>
 
-        <div className="timeline-body">
-          <div className="track-headers">
-            <div className="track-header-item">Video V1</div>
-            <div className="track-header-item">Audio A1</div>
+        <div className="fx-tl-grid">
+          <div className="fx-track-labels">
+            <div className="fx-tlabel"><span>V2</span></div>
+            <div className="fx-tlabel"><span>V1</span></div>
+            <div className="fx-tlabel"><span>A1</span></div>
           </div>
-          <div className="timeline-lanes">
-            <div className="timecode-ruler"><span>00:00:00:00</span><span>00:00:05:00</span><span>00:00:10:00</span><span>00:00:15:00</span></div>
-            <div className="playhead-needle" style={{ left: `${Math.min(100, (currentTime / totalDuration) * 100)}%` }}><div className="playhead-cap" /></div>
-            <div className="tracks-container">
-              <div className="track-lane">
-                {videoClips.map((c, i) => (
-                  <div key={c.id} onClick={() => setSelectedId(c.id)} style={{ width: `${c.duration * 36}px` }} className={`nle-clip clip-color-${i % 4} ${selectedId === c.id ? 'selected' : ''}`}>{c.name}</div>
+
+          <div className="fx-lanes">
+            <div className="fx-ruler">
+              <span>00:00:00:00</span><span>00:00:05:00</span><span>00:00:10:00</span><span>00:00:15:00</span><span>00:00:20:00</span>
+            </div>
+            <div className="fx-playhead" style={{ left: `${(currentTime / totalDuration) * 100}%` }} />
+            <div className="fx-lanes-body">
+              <div className="fx-lane">
+                {clips.filter((c) => c.track === 'v2').map((c) => (
+                  <div key={c.id} onClick={() => setSelectedId(c.id)} style={{ width: `${c.duration * 34}px` }} className={`fx-clip v2 ${selectedId === c.id ? 'selected' : ''}`}>{c.name}</div>
                 ))}
               </div>
-              <div className="track-lane">
-                {audioClips.map((c) => (
-                  <div key={c.id} onClick={() => setSelectedId(c.id)} style={{ width: `${c.duration * 36}px` }} className={`nle-clip clip-color-audio ${selectedId === c.id ? 'selected' : ''}`}>{c.name}</div>
+              <div className="fx-lane">
+                {clips.filter((c) => c.track === 'v1').map((c) => (
+                  <div key={c.id} onClick={() => setSelectedId(c.id)} style={{ width: `${c.duration * 34}px` }} className={`fx-clip v1 ${selectedId === c.id ? 'selected' : ''}`}>{c.name}</div>
+                ))}
+              </div>
+              <div className="fx-lane">
+                {clips.filter((c) => c.track === 'a1').map((c) => (
+                  <div key={c.id} onClick={() => setSelectedId(c.id)} className={`fx-clip a1 ${selectedId === c.id ? 'selected' : ''}`}>{c.name}</div>
                 ))}
               </div>
             </div>
