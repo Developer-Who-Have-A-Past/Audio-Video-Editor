@@ -1,11 +1,11 @@
 /** @type {import('next').NextConfig} */
+const isPages = process.env.GITHUB_PAGES === 'true';
+
 const nextConfig = {
   output: 'export',
-  images: {
-    unoptimized: true,
-  },
-  // Replace 'video-editor-app' with your exact GitHub repository name:
-  basePath: '/video-editor-app',
+  images: { unoptimized: true },
+  basePath: isPages ? '/video-editor-app' : '',
+  assetPrefix: isPages ? '/video-editor-app/' : '',
 };
 
 export default nextConfig;
