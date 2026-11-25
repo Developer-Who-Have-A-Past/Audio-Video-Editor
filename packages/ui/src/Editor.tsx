@@ -41,14 +41,12 @@ export function Editor() {
     clips.filter((c) => c.type !== 'audio').reduce((acc, c) => acc + c.duration, 0)
   );
 
-  // Push state to undo stack
   const commitClips = (next: ClipItem[]) => {
     setHistory((prev) => [...prev, clips]);
     setFuture([]);
     setClips(next);
   };
 
-  // Playback timer
   useEffect(() => {
     if (!isPlaying) return;
     const interval = setInterval(() => {
@@ -63,7 +61,13 @@ export function Editor() {
     return () => clearInterval(interval);
   }, [isPlaying, totalDuration]);
 
-  // Render preview frame on canvas
+  const formatTimecode = (sec: number) => {
+    const mins = Math.floor(sec / 60).toString().padStart(2, '0');
+    const secs = Math.floor(sec % 60).toString().padStart(2, '0');
+    const frames = Math.floor((sec % 1) * 30).toString().padStart(2, '0');
+    return `00:${mins}:${secs}:${frames}`;
+  };
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -92,19 +96,6 @@ export function Editor() {
     ctx.font = '14px monospace';
     ctx.fillText(`Time: ${formatTimecode(currentTime)}`, canvas.width / 2, canvas.height / 2 + 22);
   }, [clips, selectedId, currentTime]);
-
-  const formatTimecode = (sec: number) => {
-    const mins = Math.floor(sec / 60)
-      .toString()
-      .padStart(2, '0');
-    const secs = Math.floor(sec % 60)
-      .toString()
-      .padStart(2, '0');
-    const frames = Math.floor((sec % 1) * 30)
-      .toString()
-      .padStart(2, '0');
-    return `00:${mins}:${secs}:${frames}`;
-  };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -223,7 +214,6 @@ export function Editor() {
 
   return (
     <div className="nle-app">
-      {/* 1. TOP MENU BAR */}
       <header className="nle-menubar">
         <div className="menu-left">
           <div className="app-logo">V</div>
@@ -237,13 +227,12 @@ export function Editor() {
         <div className="project-title">My Project 1</div>
 
         <div className="menu-right">
-          <button className="btn-export" onClick={handleExportWav}>
+          <button type="button" className="btn-export" onClick={handleExportWav}>
             Export WAV
           </button>
         </div>
       </header>
 
-      {/* 2. UPPER SPLIT: MEDIA BROWSER + PLAYER */}
       <section className="nle-upper">
         <div className="media-panel">
           <div className="category-tabs">
@@ -260,15 +249,15 @@ export function Editor() {
 
           <div className="media-body">
             <aside className="folder-tree">
-              <div className="folder-item active">▾ Project Media</div>
+              <div className="folder-item active">Project Media</div>
               <div className="folder-item" style={{ paddingLeft: 18 }}>
-                📁 Sample Video
+                Sample Video
               </div>
               <div className="folder-item" style={{ paddingLeft: 18 }}>
-                📁 Audio Tracks
+                Audio Tracks
               </div>
               <div className="folder-item" style={{ paddingLeft: 18 }}>
-                📁 Text Layers
+                Text Layers
               </div>
             </aside>
 
@@ -295,7 +284,7 @@ export function Editor() {
                     onClick={() => handleAddSample(card.name, card.duration)}
                   >
                     <div className="media-thumb" style={{ background: card.grad }}>
-                      ▶
+                      ADD
                     </div>
                     <span className="media-card-title">{card.name}</span>
                   </div>
@@ -305,7 +294,6 @@ export function Editor() {
           </div>
         </div>
 
-        {/* Right: Preview Player */}
         <div className="player-panel">
           <div className="player-header">PLAYER</div>
           <div className="player-viewport">
@@ -328,8 +316,16 @@ export function Editor() {
 
             <div className="transport-buttons">
               <div className="icon-btn-group">
-                <button className="tool-icon-btn" onClick={() => setIsPlaying((p) => !p)}>
-                  {isPlaying ? '⏸' : '▶'}
+                <button
+                  type="button"
+                  className="tool-icon-btn"
+                  onClick={() => setIsPlaying((p) => !p)}
+                >
+                  {isPlaying ? 'Pause' : 'Play'}
                 </button>
                 <button
+                  type="button"
                   className="tool-icon-btn"
+                  onClick={() => {
+                    setIsPlaying(false);
+                    setCurrentTime
