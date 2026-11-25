@@ -1,207 +1,167 @@
-'use client';
+const TABS = ['Media', 'Stock Media', 'Audio', 'Titles', 'Transitions', 'Effects', 'Stickers', 'Templates'];
+const SAMPLE_CARDS = [
+  { name: 'Neon Abstract', grad: 'linear-gradient(135deg, #0ea5e9, #6366f1)' },
+  { name: 'Studio Silhouette', grad: 'linear-gradient(135deg, #10b981, #065f46)' },
+  { name: 'Typography Reel', grad: 'linear-gradient(135deg, #f59e0b, #78350f)' },
+  { name: 'Cyber Prism', grad: 'linear-gradient(135deg, #ec4899, #4f46e5)' },
+  { name: 'Sunset Palms', grad: 'linear-gradient(135deg, #f43f5e, #8b5cf6)' },
+  { name: 'Minimal Arch', grad: 'linear-gradient(135deg, #64748b, #1e293b)' },
+];
 
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import {
-  addClip, addText, duplicateClip, emptyProject, History, locate, moveClip, removeClip, removeText,
-  splitAt, totalDuration, updateClip, updateText,
-  type Clip, type Project,
-} from '@editor/core';
-import { drawFrame, encodeWav, mixdown, type PlayableMedia } from '@editor/engine';
+// Inside your Editor component return:
+return (
+  <div className="nle-app">
+    {/* 1. TOP MENU BAR */}
+    <header className="nle-menubar">
+      <div className="menu-left">
+        <div className="app-logo">V</div>
+        <span className="menu-item">File</span>
+        <span className="menu-item">Edit</span>
+        <span className="menu-item">Tools</span>
+        <span className="menu-item">View</span>
+        <span className="menu-item">Help</span>
+      </div>
 
-type Imported = PlayableMedia & { file: File; duration: number };
-type Selection = { type: 'clip' | 'text'; id: string } | null;
+      <div className="project-title">My Project 1</div>
 
-const uid = () => crypto.randomUUID();
-const fmt = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
+      <div className="menu-right">
+        <button className="btn-export" /* onClick={yourExportWavHandler} */>
+          Export WAV
+        </button>
+      </div>
+    </header>
 
-function loadMedia(file: File): Promise<Imported> {
-  return new Promise((resolve, reject) => {
-    const element = document.createElement('video');
-    element.preload = 'auto';
-    element.playsInline = true;
-    element.src = URL.createObjectURL(file);
-    element.onloadedmetadata = () =>
-      resolve({
-        id: uid(),
-        name: file.name,
-        kind: file.type.startsWith('audio') && !element.videoWidth ? 'audio' : 'video',
-        element,
-        file,
-        duration: element.duration,
-      });
-    element.onerror = () => reject(new Error(`This browser cannot read ${file.name}`));
-  });
-}
+    {/* 2. UPPER SPLIT: MEDIA BROWSER + PLAYER */}
+    <section className="nle-upper">
+      {/* Left: Filmora-style Asset Library */}
+      <div className="media-panel">
+        <div className="category-tabs">
+          {TABS.map((tab, i) => (
+            <div key={tab} className={`cat-tab ${i === 0 ? 'active' : ''}`}>
+              <span>{tab}</span>
+            </div>
+          ))}
+        </div>
 
-/**
- * Starter editor: import, scrub preview, split, trim by clip list, text, undo/redo, WAV export.
- * Still to port from the prototype (index.html): the playback loop, timeline canvas with drag trim,
- * and real-time video export (see engine/record.ts).
- */
-export function Editor() {
-  const history = useRef(new History<Project>(emptyProject()));
-  const media = useRef(new Map<string, Imported>());
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [project, setProject] = useState<Project>(history.current.present);
-  const [mediaCount, setMediaCount] = useState(0);
-  const [time, setTime] = useState(0);
-  const [selection, setSelection] = useState<Selection>(null);
-  const [message, setMessage] = useState('');
+        <div className="media-body">
+          <aside className="folder-tree">
+            <div className="folder-item active">▾ Project Media</div>
+            <div className="folder-item" style={{ paddingLeft: 18 }}>📁 Sample Video</div>
+            <div className="folder-item" style={{ paddingLeft: 18 }}>📁 Audio Tracks</div>
+            <div className="folder-item" style={{ paddingLeft: 18 }}>📁 Text Layers</div>
+          </aside>
 
-  const total = totalDuration(project);
-  const apply = (next: Project) => setProject(history.current.push(next));
-  const selectedClip = selection?.type === 'clip' ? project.clips.find((c) => c.id === selection.id) : undefined;
-  const selectedText = selection?.type === 'text' ? project.texts.find((t) => t.id === selection.id) : undefined;
-
-  useEffect(() => {
-    const ctx = canvasRef.current?.getContext('2d');
-    if (!ctx) return;
-    const paint = () => drawFrame(ctx, 1280, 720, time, project, (id) => media.current.get(id));
-    const L = locate(project, time);
-    const m = L ? media.current.get(L.clip.mediaId) : undefined;
-    if (L && m) {
-      const target = L.clip.in + L.local;
-      if (Math.abs(m.element.currentTime - target) > 0.02) {
-        m.element.addEventListener('seeked', paint, { once: true });
-        m.element.currentTime = target;
-        return;
-      }
-    }
-    paint();
-  }, [project, time, mediaCount]);
-
-  async function onImport(e: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    e.target.value = '';
-    for (const file of files) {
-      try {
-        const m = await loadMedia(file);
-        media.current.set(m.id, m);
-        setMediaCount(media.current.size);
-        apply(addClip(history.current.present, m, uid()));
-      } catch (err) {
-        setMessage((err as Error).message);
-      }
-    }
-  }
-
-  function split() {
-    const r = splitAt(project, time, uid());
-    if (r) {
-      apply(r.project);
-      setSelection({ type: 'clip', id: r.newClipId });
-    } else setMessage('Move the playhead inside a clip to split it');
-  }
-
-  function remove() {
-    if (!selection) return;
-    apply(selection.type === 'clip' ? removeClip(project, selection.id) : removeText(project, selection.id));
-    setSelection(null);
-  }
-
-  function addCaption() {
-    const id = uid();
-    apply(addText(project, time, id));
-    setSelection({ type: 'text', id });
-  }
-
-  const undo = () => setProject(history.current.undo());
-  const redo = () => setProject(history.current.redo());
-
-  async function exportWav() {
-    if (!project.clips.length) return;
-    setMessage('Mixing audio...');
-    const ctx = new AudioContext();
-    const buf = await mixdown(project, (id) => media.current.get(id)?.file, ctx);
-    const url = URL.createObjectURL(encodeWav(buf));
-    const a = Object.assign(document.createElement('a'), { href: url, download: 'edited-audio.wav' });
-    a.click();
-    setMessage('Audio exported');
-  }
-
-  const patchClip = (patch: Partial<Clip>) => selectedClip && apply(updateClip(project, selectedClip.id, patch));
-
-  return (
-    <div className="editor">
-      <header className="bar">
-        <strong>Video &amp; Audio Editor</strong>
-        <label className="btn">
-          Import
-          <input type="file" accept="video/*,audio/*" multiple hidden onChange={onImport} />
-        </label>
-        <button onClick={undo} disabled={!history.current.canUndo}>Undo</button>
-        <button onClick={redo} disabled={!history.current.canRedo}>Redo</button>
-        <button onClick={split}>Split</button>
-        <button onClick={addCaption}>Add text</button>
-        <button onClick={remove} disabled={!selection}>Delete</button>
-        <button onClick={exportWav}>Export audio (WAV)</button>
-        <span className="msg">{message}</span>
-      </header>
-
-      <main className="main">
-        <section className="stage">
-          <canvas ref={canvasRef} width={1280} height={720} />
-          <input
-            type="range" min={0} max={Math.max(total, 0.1)} step={0.01} value={time}
-            onChange={(e) => setTime(Number(e.target.value))} aria-label="Playhead"
-          />
-          <div className="time">{fmt(time)} / {fmt(total)}</div>
-        </section>
-
-        <aside className="side">
-          <h2>Clips</h2>
-          <ol>
-            {project.clips.map((c) => (
-              <li key={c.id} className={selection?.id === c.id ? 'sel' : ''}>
-                <button onClick={() => setSelection({ type: 'clip', id: c.id })}>
-                  {media.current.get(c.mediaId)?.name ?? 'clip'} ({fmt(c.out - c.in)})
-                </button>
-                <button onClick={() => apply(moveClip(project, c.id, -1))} aria-label="Move earlier">&lt;</button>
-                <button onClick={() => apply(moveClip(project, c.id, 1))} aria-label="Move later">&gt;</button>
-                <button onClick={() => apply(duplicateClip(project, c.id, uid()))}>Copy</button>
-              </li>
-            ))}
-          </ol>
-
-          {selectedClip && (
-            <div className="inspector">
-              <label>Volume {Math.round(selectedClip.volume * 100)}%
-                <input type="range" min={0} max={2} step={0.05} value={selectedClip.volume} onChange={(e) => patchClip({ volume: Number(e.target.value) })} />
-              </label>
-              <label>Fade in {selectedClip.fadeIn.toFixed(1)}s
-                <input type="range" min={0} max={5} step={0.1} value={selectedClip.fadeIn} onChange={(e) => patchClip({ fadeIn: Number(e.target.value) })} />
-              </label>
-              <label>Fade out {selectedClip.fadeOut.toFixed(1)}s
-                <input type="range" min={0} max={5} step={0.1} value={selectedClip.fadeOut} onChange={(e) => patchClip({ fadeOut: Number(e.target.value) })} />
-              </label>
-              <label>Filter
-                <select value={selectedClip.filter} onChange={(e) => patchClip({ filter: e.target.value as Clip['filter'] })}>
-                  {['none', 'gray', 'sepia', 'warm', 'cool', 'vivid', 'vintage'].map((f) => <option key={f} value={f}>{f}</option>)}
-                </select>
-              </label>
-              <label>Transition
-                <select value={selectedClip.transition} onChange={(e) => patchClip({ transition: e.target.value as Clip['transition'] })}>
-                  {['none', 'in', 'out', 'both'].map((f) => <option key={f} value={f}>{f}</option>)}
-                </select>
+          <div className="media-browser-content">
+            <div className="search-bar-row">
+              <input className="search-input" placeholder="Search media..." />
+              <label className="btn-import-pill">
+                + Import
+                <input type="file" hidden /* onChange={yourImportHandler} */ />
               </label>
             </div>
-          )}
 
-          {selectedText && (
-            <div className="inspector">
-              <label>Text
-                <input type="text" value={selectedText.text} onChange={(e) => apply(updateText(project, selectedText.id, { text: e.target.value }))} />
-              </label>
-              <label>Start (s)
-                <input type="number" step={0.1} value={selectedText.start} onChange={(e) => apply(updateText(project, selectedText.id, { start: Number(e.target.value) }))} />
-              </label>
-              <label>End (s)
-                <input type="number" step={0.1} value={selectedText.end} onChange={(e) => apply(updateText(project, selectedText.id, { end: Number(e.target.value) }))} />
-              </label>
+            <div className="section-label">Sample Video & Clips</div>
+            <div className="media-grid">
+              {SAMPLE_CARDS.map((card) => (
+                <div key={card.name} className="media-card">
+                  <div className="media-thumb" style={{ background: card.grad }}>
+                    ▶
+                  </div>
+                  <span className="media-card-title">{card.name}</span>
+                </div>
+              ))}
             </div>
-          )}
-        </aside>
-      </main>
-    </div>
-  );
-}
+          </div>
+        </div>
+      </div>
+
+      {/* Right: Preview Player */}
+      <div className="player-panel">
+        <div className="player-header">PLAYER</div>
+        <div className="player-viewport">
+          {/* Place your existing <canvas ref={canvasRef} /> here */}
+        </div>
+
+        <div className="player-controls">
+          <div className="scrubber-row">
+            <input
+              type="range"
+              className="mint-slider"
+              /* value={currentTime} max={duration} onChange={yourSeekHandler} */
+            />
+            <span className="timecode-display">00:00:00:00</span>
+          </div>
+
+          <div className="transport-buttons">
+            <div className="icon-btn-group">
+              <button className="tool-icon-btn" /* onClick={yourPlayPauseHandler} */>▶</button>
+              <button className="tool-icon-btn" /* onClick={yourStopHandler} */>⏹</button>
+            </div>
+            <span className="quality-badge">Full Quality</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {/* 3. BOTTOM MULTI-TRACK TIMELINE */}
+    <section className="timeline-panel">
+      <div className="timeline-actionbar">
+        <div className="icon-btn-group">
+          <button className="tool-icon-btn" /* onClick={yourUndoHandler} */>↶ Undo</button>
+          <button className="tool-icon-btn" /* onClick={yourRedoHandler} */>↷ Redo</button>
+          <button className="tool-icon-btn" /* onClick={yourSplitHandler} */>✂ Split</button>
+          <button className="tool-icon-btn" /* onClick={yourAddTextHandler} */>T+ Add Text</button>
+          <button className="tool-icon-btn" /* onClick={yourDeleteHandler} */>🗑 Delete</button>
+        </div>
+        <div className="icon-btn-group">
+          <span style={{ color: 'var(--text-secondary)', fontSize: 11 }}>Zoom</span>
+          <input type="range" className="mint-slider" style={{ width: 90 }} />
+        </div>
+      </div>
+
+      <div className="timeline-body">
+        <div className="track-headers">
+          <div className="track-header-item">🎬 V1</div>
+          <div className="track-header-item">🎵 A1</div>
+        </div>
+
+        <div className="timeline-lanes">
+          <div className="timecode-ruler">
+            <span>00:00:00:00</span>
+            <span>00:00:05:00</span>
+            <span>00:00:10:00</span>
+            <span>00:00:15:00</span>
+            <span>00:00:20:00</span>
+          </div>
+
+          {/* Red Playhead */}
+          <div className="playhead-needle" style={{ left: '32%' }}>
+            <div className="playhead-cap" />
+          </div>
+
+          <div className="tracks-container">
+            {/* Video Track: Map your state clips here */}
+            <div className="track-lane">
+              {/* Example of how your mapped clips will look:
+                  clips.map((clip, idx) => (
+                    <div
+                      key={clip.id}
+                      onClick={() => setSelectedId(clip.id)}
+                      className={`nle-clip clip-color-${idx % 4} ${selectedId === clip.id ? 'selected' : ''}`}
+                    >
+                      {clip.name}
+                    </div>
+                  ))
+              */}
+            </div>
+
+            {/* Audio / Overlay Track */}
+            <div className="track-lane">
+              {/* Map audio or text clips here with className="nle-clip clip-color-audio" */}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+);
