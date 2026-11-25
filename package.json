@@ -1,0 +1,19 @@
+{
+  "name": "video-editor",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "npm run dev -w @editor/web",
+    "build:web": "npm run build -w @editor/web",
+    "test": "npm run test -w @editor/core",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "android:sync": "npm run build:web && npm run sync -w @editor/android",
+    "android:open": "npm run open -w @editor/android",
+    "desktop:dev": "npm run dev -w @editor/desktop",
+    "desktop:build": "npm run build -w @editor/desktop"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}
